@@ -4,8 +4,8 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.gotti.wurmunlimited.modloader.JavassistUtil;
 import org.gotti.wurmunlimited.modloader.classhooks.HookException;
+import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.interfaces.Configurable;
 import org.gotti.wurmunlimited.modloader.interfaces.PreInitable;
 import org.gotti.wurmunlimited.modloader.interfaces.WurmMod;
@@ -55,7 +55,7 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 		if (autoPassSkillChecks || noMeditateDistance || noMeditateDelay 
 				|| unlimitedMeditations || noPathLevelDelay ) {
 			try {
-				CtClass ctCults = JavassistUtil.getCtClass("com.wurmonline.server.players.Cults");
+				CtClass ctCults = HookManager.getInstance().getClassPool().get("com.wurmonline.server.players.Cults");
 				ctCults.getDeclaredMethod("meditate").instrument(new ExprEditor() {
 					public void edit(MethodCall m) throws CannotCompileException {
 						if (autoPassSkillChecks) {

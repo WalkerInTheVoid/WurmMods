@@ -4,8 +4,8 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.gotti.wurmunlimited.modloader.JavassistUtil;
 import org.gotti.wurmunlimited.modloader.classhooks.HookException;
+import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.interfaces.Configurable;
 import org.gotti.wurmunlimited.modloader.interfaces.PreInitable;
 import org.gotti.wurmunlimited.modloader.interfaces.WurmMod;
@@ -28,9 +28,9 @@ public class ProspectMod implements WurmMod, Configurable, PreInitable {
 		if (canFindOreUnderground) {
 			try {
 				CtClass[] paramTypes = {
-						JavassistUtil.getCtClass("com.wurmonline.server.behaviours.Action"),
-						JavassistUtil.getCtClass("com.wurmonline.server.creatures.Creature"),
-						JavassistUtil.getCtClass("com.wurmonline.server.items.Item"),
+						HookManager.getInstance().getClassPool().get("com.wurmonline.server.behaviours.Action"),
+						HookManager.getInstance().getClassPool().get("com.wurmonline.server.creatures.Creature"),
+						HookManager.getInstance().getClassPool().get("com.wurmonline.server.items.Item"),
 						CtPrimitiveType.intType,
 						CtPrimitiveType.intType,
 						CtPrimitiveType.booleanType,
@@ -39,7 +39,7 @@ public class ProspectMod implements WurmMod, Configurable, PreInitable {
 						CtPrimitiveType.shortType,
 						CtPrimitiveType.floatType
 				};
-				CtClass ctCaveTileBehaviour = JavassistUtil.getCtClass("com.wurmonline.server.behaviours.CaveTileBehaviour");
+				CtClass ctCaveTileBehaviour = HookManager.getInstance().getClassPool().get("com.wurmonline.server.behaviours.CaveTileBehaviour");
 				//CaveTileBehavior doesn't have a good way to call non-static methods on TileRockBehavior.
 				//So the following line GIVES it one, by creating a static TileRockBehavior that can then 
 				//be used in the code that will be inserted into the "action" method.
