@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Created-By: 1.7.0_67 (Oracle Corporation)
+Class-Path: javassist.jar modloader.jar common.jar lib/activation.jar lib
+ /annotations.jar lib/commons-codec-1.6.jar lib/controlsfx-8.20.8.jar 
+ lib/controlsfx-8.20.8-sources.jar lib/httpclient-4.2.5.jar lib/httpco
+ re-4.2.4.jar lib/javaws.jar lib/jsr305.jar lib/jtwitter.jar lib/mail.
+ jar lib/mysql-connector.jar lib/mysql-connector-java-5.1.23-bin.jar l
+ ib/servlet.jar lib/signpost-core.jar lib/sqlite-jdbc-3.8.11.2.jar lib
+ /SteamServerJni.jar
