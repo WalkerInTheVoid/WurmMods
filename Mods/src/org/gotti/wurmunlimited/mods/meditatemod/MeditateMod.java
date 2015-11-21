@@ -1,8 +1,13 @@
 package org.gotti.wurmunlimited.mods.meditatemod;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import org.gotti.wurmunlimited.modloader.classhooks.HookException;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
@@ -21,7 +26,7 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 	boolean noMeditateDelay = true;
 	boolean noMeditateDistance = true;
 	boolean unlimitedMeditations = false;
-	boolean noPathLevelDelay = false;
+	float pathLevelDelayMultiplier = 1.0f;
 	boolean bDebug = false;
 	private Logger logger = Logger.getLogger(this.getClass().getName());
 
@@ -31,15 +36,34 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 		noMeditateDelay = Boolean.parseBoolean(properties.getProperty("noMeditateDelay", Boolean.toString(noMeditateDelay)));
 		noMeditateDistance = Boolean.parseBoolean(properties.getProperty("noMeditateDistance", Boolean.toString(noMeditateDistance)));
 		unlimitedMeditations = Boolean.parseBoolean(properties.getProperty("unlimitedMeditations", Boolean.toString(unlimitedMeditations)));
-		noPathLevelDelay = Boolean.parseBoolean(properties.getProperty("noPathLevelDelay", Boolean.toString(noPathLevelDelay)));
+		pathLevelDelayMultiplier = Float.parseFloat(properties.getProperty("pathLevelDelayMultiplier", Float.toString(pathLevelDelayMultiplier)));
 		bDebug = Boolean.parseBoolean(properties.getProperty("debug", Boolean.toString(bDebug)));
-
+		try {
+			final String logsPath = Paths.get("mods") + "/logs/";
+			final File newDirectory = new File(logsPath);
+			if (!newDirectory.exists()) {
+				newDirectory.mkdirs();
+			}
+			final FileHandler fh = new FileHandler(String.valueOf(logsPath) + "mods.log", 10240000, 200, true);
+			if (bDebug) {
+				fh.setLevel(Level.INFO);
+			}
+			else {
+				fh.setLevel(Level.WARNING);
+			}
+			fh.setFormatter(new SimpleFormatter());
+			logger.addHandler(fh);
+		}
+		catch (IOException ie) {
+			System.err.println(this.getClass().getName() + ": Unable to add file handler to logger");
+		}
 		logger.log(Level.INFO, "autoPassSkillChecks: " + autoPassSkillChecks);
 		logger.log(Level.INFO, "noMeditateDelay: " + noMeditateDelay);
 		logger.log(Level.INFO, "noMeditateDistance: " + noMeditateDistance);
 		logger.log(Level.INFO, "unlimitedMeditations: " + unlimitedMeditations);
-		logger.log(Level.INFO, "noPathLevelDelay: " + noPathLevelDelay);
+		logger.log(Level.INFO, "pathLevelDelayMultiplier: " + pathLevelDelayMultiplier);
 		Debug("Debugging messages are enabled.");
+		
 	}
 
 	private void Debug(String x) {
@@ -53,7 +77,7 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 	@Override
 	public void preInit() {
 		if (autoPassSkillChecks || noMeditateDistance || noMeditateDelay 
-				|| unlimitedMeditations || noPathLevelDelay ) {
+				|| unlimitedMeditations ) {
 			try {
 				CtClass ctCults = HookManager.getInstance().getClassPool().get("com.wurmonline.server.players.Cults");
 				ctCults.getDeclaredMethod("meditate").instrument(new ExprEditor() {
@@ -137,21 +161,6 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 									return;
 								}
 							}
-							if (noPathLevelDelay) {
-								if (m.getMethodName().equals("getTimeLeftToIncreasePath")) {
-									/*
-									 * This function returns how much time from
-									 * now the player needs to wait until the
-									 * next path question. If it is negative,
-									 * the time is in the past. Thus, to ensure
-									 * there is NO delay, we override it to
-									 * return -1L.
-									 */
-									m.replace("$_ = -1L;");
-									Debug("Replaced getTimeLeftToIncreasePath");
-									return;
-								}
-							}
 						}
 					}
 				});
@@ -159,6 +168,34 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 				throw new HookException(e);
 			}
 		}
+		if (pathLevelDelayMultiplier != 1.0f) {
+			try {
+				CtClass ctCultist = HookManager.getInstance().getClassPool()
+						.get("com.wurmonline.server.players.Cultist");
+				String toInsert = "{\r\n";
+				if (bDebug) {
+					toInsert += "	java.util.logging.Logger.getLogger(\"org.gotti.wurmunlimited.mods.meditatemod.MeditateMod\").info(\"Original time left: \" + $_);\r\n";
+					toInsert += "	System.out.println(\"Original time left: \" + $_);\r\n";
+					toInsert += "	java.util.logging.Logger.getLogger(\"org.gotti.wurmunlimited.mods.meditatemod.MeditateMod\").info(\"Original Needed Time: \" + ($_  + (currentTime - this.lastReceivedLevel)));\r\n";
+					toInsert += "	System.out.println(\"Original Needed Time: \" + ($_  + (currentTime - this.lastReceivedLevel)));\r\n";
+				}
+				toInsert += "	$_ = (($_ + (currentTime - this.lastReceivedLevel)) * " + pathLevelDelayMultiplier + ");\r\n";
+				if (bDebug) {
+					toInsert += "	java.util.logging.Logger.getLogger(\"org.gotti.wurmunlimited.mods.meditatemod.MeditateMod\").info(\"New Needed Time: \" + $_);\r\n";
+					toInsert += "	System.out.println(\"New Needed Time: \" + $_);\r\n";
+				}
+				toInsert += "	$_ = $_  - (currentTime - this.lastReceivedLevel);";
+				if (bDebug) {
+					toInsert += "	java.util.logging.Logger.getLogger(\"org.gotti.wurmunlimited.mods.meditatemod.MeditateMod\").info(\"New time left: \" + $_);\r\n";
+					toInsert += "	System.out.println(\"New time left: \" + $_);\r\n";
+				}
+				toInsert += "}";
+				ctCultist.getDeclaredMethod("getTimeLeftToIncreasePath").insertAfter(toInsert);
+			} catch (NotFoundException | CannotCompileException e) {
+				throw new HookException(e);
+			}
+		}
+
 	}
 
 }
