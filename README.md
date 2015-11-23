@@ -29,7 +29,7 @@ A bit bare bones but I'll probably come back to this one.
   * No delay between first 5 skill gains of the day
   * No difference in delay requirements after the first 5 meditations (if the above setting is on, there's no delay requirements for meditation skill gain at all, if it's off, always 30 minutes between meditation skill gains, never 3 hours)
   * Disable distance requirements for meditation skill gains (No more need to move 11 tiles for skillgain)
-  * **NEW**: A configurable multiplier for path question cooldowns.  This can be set to half to cut these delays in half, set to 0 to disable them entirely, the choice is yours.
+  * A configurable multiplier for path question cooldowns.  This can be set to half to cut these delays in half, set to 0 to disable them entirely, the choice is yours.
   
 ### PhobiaMod
 Don't like the spider models?  Swap out spiders with other mobs!
