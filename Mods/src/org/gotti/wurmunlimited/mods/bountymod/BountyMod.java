@@ -78,6 +78,7 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 		}
 		catch (IOException ie) {
 			System.err.println(this.getClass().getName() + ": Unable to add file handler to logger");
+			logger.log(Level.WARNING, this.getClass().getName() + ": Unable to add file handler to logger");
 		}
 		Debug("Debugging messages are enabled.");
 		logger.log(Level.INFO, "skillGainForBred: " + skillGainForBred);
