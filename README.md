@@ -23,7 +23,7 @@ A bit bare bones but I'll probably come back to this one.
 
 ### DigLikeMining
 * A recreation of [Alexgopen's Digging Like Mining](http://forum.wurmonline.com/index.php?/topic/132826-wip-digging-like-mining/) for ago's modloader.  While I didn't have Alexgopen's original code, his work did tell me which classes I needed to modify.
-One caveat is that you still need enough room/weight in your inventory for one dug-up item for digging to be possible.
+In addition, added dredging to ship, and using dirt/sand piles on the ground you're standing on when flattening or leveling tiles (any dirt in your inventory will be used first, followed by dirt on the ground, followed by sand in your inventory, and finally sand on the ground).
  
 ### MeditateMod
   * Enables guaranteed skill success (no more "You fail to relax" or not getting a path question you qualify for)
