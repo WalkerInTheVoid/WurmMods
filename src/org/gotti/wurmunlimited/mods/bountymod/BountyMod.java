@@ -15,24 +15,17 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-import com.wurmonline.server.FailedException;
-import com.wurmonline.server.Features;
 import com.wurmonline.server.Server;
 import com.wurmonline.server.creatures.Creature;
-import com.wurmonline.server.creatures.CreatureTemplate;
 import com.wurmonline.server.creatures.CreatureTemplateIds;
 import com.wurmonline.server.economy.Economy;
 import com.wurmonline.server.economy.Shop;
 import com.wurmonline.server.items.Item;
-import com.wurmonline.server.items.ItemFactory;
-import com.wurmonline.server.items.NoSuchTemplateException;
-import com.wurmonline.server.players.DbPlayerInfo;
 import com.wurmonline.server.players.Player;
 
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
-import javassist.CtField;
 import javassist.CtNewMethod;
 import javassist.CtPrimitiveType;
 import javassist.NotFoundException;
@@ -40,7 +33,6 @@ import javassist.bytecode.Descriptor;
 import javassist.expr.ExprEditor;
 import javassist.expr.MethodCall;
 
-import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.classhooks.InvocationHandlerFactory;
 import org.gotti.wurmunlimited.modloader.interfaces.Configurable;
@@ -52,6 +44,9 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 	private Logger logger = Logger.getLogger(this.getClass().getName());
 	private boolean skillGainForBred = true;
 	private boolean increasedBounties = true;
+	private boolean payBountyToBank = true;
+	private float bountyMultiplier = 1.0f;
+	private float bredMultiplier = 0.1f;
 	private static boolean bDebug = false;
 	public static Map<Integer, Long> creatureBounties;
 
@@ -59,6 +54,9 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 	public void configure(Properties properties) {
 		skillGainForBred = Boolean.parseBoolean(properties.getProperty("skillGainForBred", Boolean.toString(skillGainForBred)));
 		increasedBounties = Boolean.parseBoolean(properties.getProperty("increasedBounties", Boolean.toString(increasedBounties)));
+		payBountyToBank = Boolean.parseBoolean(properties.getProperty("payBountyToBank", Boolean.toString(payBountyToBank)));
+		bountyMultiplier = Float.parseFloat(properties.getProperty("bountyMultiplier", Float.toString(bountyMultiplier)));
+		bredMultiplier = Float.parseFloat(properties.getProperty("bredMultiplier", Float.toString(bredMultiplier)));
 		bDebug = Boolean.parseBoolean(properties.getProperty("debug", Boolean.toString(bDebug)));
 		try {
 			final String logsPath = Paths.get("mods") + "/logs/";
@@ -66,7 +64,7 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 			if (!newDirectory.exists()) {
 				newDirectory.mkdirs();
 			}
-			final FileHandler fh = new FileHandler(String.valueOf(logsPath) + "mods.log", 10240000, 200, true);
+			final FileHandler fh = new FileHandler(String.valueOf(logsPath) + this.getClass().getSimpleName() + ".log", 10240000, 200, true);
 			if (bDebug) {
 				fh.setLevel(Level.INFO);
 			}
@@ -83,6 +81,9 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 		Debug("Debugging messages are enabled.");
 		logger.log(Level.INFO, "skillGainForBred: " + skillGainForBred);
 		logger.log(Level.INFO, "increasedBounties: " + increasedBounties);
+		logger.log(Level.INFO, "payBountyToBank: " + payBountyToBank);
+		logger.log(Level.INFO, "bountyMultiplier: " + bountyMultiplier);
+		logger.log(Level.INFO, "bredMultiplier: " + bredMultiplier);
 		//Now for the individual bounties
 		//Bounties are in iron coins.  So 100 = 1 copper, 10000 = 1 silver, etc
 		creatureBounties = new HashMap<Integer, Long>();
@@ -216,6 +217,7 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 	public void loadBounty(Properties properties, String creatureName, int templateID, long defaultBounty) {
 		String bountyName = creatureName + "_Bounty";
 		long bounty = Long.parseLong(properties.getProperty(bountyName, Long.toString(defaultBounty)));
+		bounty = (long)(bounty * bountyMultiplier);
 		creatureBounties.put(templateID, bounty);
 		logger.log(Level.INFO, bountyName + ": " + bounty);
 	}
@@ -325,7 +327,7 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 						long bounty = org.gotti.wurmunlimited.mods.bountymod.BountyMod.creatureBounties.get(templateid);
 						Debug("Bounty is: " + bounty);
 						if(thisCreature.isBred()) {
-							bounty = bounty / 10;
+							bounty = (long)(bounty * bredMultiplier);
 							Debug("Creature was bred, so bounty is reduced to: " + bounty);
 						}
 						String coinMessage;
@@ -337,18 +339,30 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 							Debug("King can't cover all the bounty, reduced to: " + bounty);
 							coinMessage = "The kingdom coffers have run low, and so you only receive ";
 						}
-						Debug("Getting coins...");
-						Item[] coins = Economy.getEconomy().getCoinsFor(bounty);
-						Debug("Giving coins to player...");
-						for (Iterator<Item> iterator = Arrays.asList(coins).iterator(); iterator.hasNext();) {
-							Item coin = iterator.next();
-							thisPlayer.getInventory().insertItem(coin, true);
-							kingsMoney.setMoney(kingsMoney.getMoney() - Economy.getValueFor(coin.getTemplateId()));
+						if(payBountyToBank) {
+							Debug("Bounty goes to player's bank.  Adding to bank...");
+							thisPlayer.addMoney(bounty);
+						} else {
+							Debug("Bounty goes to player inventory.  Getting coins...");
+							Item[] coins = Economy.getEconomy().getCoinsFor(bounty);
+							Debug("Giving coins to player...");
+							for (Iterator<Item> iterator = Arrays.asList(coins)
+									.iterator(); iterator.hasNext();) {
+								Item coin = iterator.next();
+								thisPlayer.getInventory().insertItem(coin, true);
+								kingsMoney.setMoney(kingsMoney.getMoney()
+										- Economy.getValueFor(coin.getTemplateId()));
+							}
 						}
 						Debug("Compiling message...");
-						coinMessage += Economy.getEconomy().getChangeFor(bounty).getChangeString() + ".";
+						coinMessage += Economy.getEconomy().getChangeFor(bounty).getChangeString();
+						if (payBountyToBank) {
+							coinMessage += " to your bank account.";
+						} else {
+							coinMessage += ".";
+						}
 						Debug("Sending message...");
-						thisPlayer.getCommunicator().sendNormalServerMessage(coinMessage);
+						thisPlayer.getCommunicator().sendSafeServerMessage(coinMessage);
 						Debug("CheckCoinBounty finished.");
 						return true;
 					} else {
