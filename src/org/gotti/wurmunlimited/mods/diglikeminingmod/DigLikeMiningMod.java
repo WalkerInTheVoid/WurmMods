@@ -38,22 +38,9 @@ public class DigLikeMiningMod implements WurmMod, Configurable, PreInitable {
 			try {
 				CtMethod dig = HookManager.getInstance().getClassPool()
 						.getCtClass("com.wurmonline.server.behaviours.Terraforming").getDeclaredMethod("dig");
-				String checkGroundClutter = "{"
-						+ "final com.wurmonline.server.zones.VolaTile tempTile = " 
-						+ 		"com.wurmonline.server.zones.Zones.getTileOrNull(performer.getTileX(), performer.getTileY(), performer.isOnSurface());";
-//				if(bDebug) checkGroundClutter += "if(tempTile != null) {System.out.println(\"NumItems: \" + tempTile.getNumberOfItems(performer.getFloorLevel()));"
-//						+ "} else { System.out.println(\"tempTile is null, posX: \" + performer.getTileX() + \" " 
-//						+ "posY: \" + performer.getTileY() + \" IsOnSurface: \" + performer.isOnSurface()); }";
-				checkGroundClutter += "if (tempTile != null && tempTile.getNumberOfItems(performer.getFloorLevel()) > 99) {\r\n"
-						+ 		"performer.getCommunicator().sendNormalServerMessage(\"There is no space to dig here. Clear the area first.\");\r\n" 
-						+ 		"return true;\r\n" 
-						+ 	"}"
-						+ "}";
+				
 				dig.instrument(new InsertToGround(true));
 				
-				dig.insertBefore(checkGroundClutter);
-				CtMethod flatten = HookManager.getInstance().getClassPool()
-						.getCtClass("com.wurmonline.server.behaviours.Flattening").getDeclaredMethod("flatten");
 				CtMethod getDirt = HookManager.getInstance().getClassPool()
 						.getCtClass("com.wurmonline.server.behaviours.Flattening").getDeclaredMethod("getDirt");
 				CtMethod checkUseDirt = HookManager.getInstance().getClassPool()
@@ -61,7 +48,6 @@ public class DigLikeMiningMod implements WurmMod, Configurable, PreInitable {
 				CtMethod useDirt = HookManager.getInstance().getClassPool()
 						.getCtClass("com.wurmonline.server.behaviours.Flattening").getDeclaredMethod("useDirt");
 				getDirt.instrument(new InsertToGround());
-				flatten.insertBefore(checkGroundClutter);
 				checkUseDirt.instrument(new FillFromGround());
 				useDirt.instrument(new FillFromGround());
 			}
@@ -177,12 +163,27 @@ public class DigLikeMiningMod implements WurmMod, Configurable, PreInitable {
 					toInsert = insertToGround;
 				}
 				m.replace(debugString + escapeString + toInsert + "$_ = true;}");
-			} else if ("com.wurmonline.server.items.Item".equals(m.getClassName()) && m.getMethodName().equals("getNumItemsNotCoins")) {
+			} else if (m.getClassName().equals("com.wurmonline.server.items.Item") && m.getMethodName().equals("getNumItemsNotCoins")) {
 				m.replace("$_ = 0;");
-			} else if ("com.wurmonline.server.creatures.Creature".equals(m.getClassName()) && m.getMethodName().equals("canCarry")) {
-				m.replace("$_ = true;");
-			} else if ("com.wurmonline.server.items.Item".equals(m.getClassName()) && m.getMethodName().equals("getFreeVolume")) {
+			} else if (m.getClassName().equals("com.wurmonline.server.creatures.Creature") && m.getMethodName().equals("canCarry")) {
+				String checkGroundClutter = "{$_ = true;"
+						+ "final com.wurmonline.server.zones.VolaTile tempTile = " 
+						+ 		"com.wurmonline.server.zones.Zones.getTileOrNull($0.getTileX(), $0.getTileY(), $0.isOnSurface());";
+//				if(bDebug) checkGroundClutter += "if(tempTile != null) {System.out.println(\"NumItems: \" + tempTile.getNumberOfItems(performer.getFloorLevel()));"
+//						+ "} else { System.out.println(\"tempTile is null, posX: \" + performer.getTileX() + \" " 
+//						+ "posY: \" + performer.getTileY() + \" IsOnSurface: \" + performer.isOnSurface()); }";
+				checkGroundClutter += "if (tempTile != null && tempTile.getNumberOfItems($0.getFloorLevel()) > 99) {\r\n"
+						+ 		"$0.getCommunicator().sendNormalServerMessage(\"There is no space to dig here. Clear the area first.\");\r\n" 
+						+ 		"$_ = false;\r\n" 
+						+ 	"}"
+						+ "}";
+				m.replace(checkGroundClutter);
+			} else if (m.getClassName().equals("com.wurmonline.server.items.Item") && m.getMethodName().equals("getFreeVolume")) {
 				m.replace("$_ = 1000;");
+			} else if (m.getClassName().equals("com.wurmonline.server.creatures.Communicator") && m.getMethodName().equals("sendNormalServerMessage")) {
+				m.replace("if (!($1.equals(\"You are not strong enough to carry one more dirt pile.\") " 
+					+ "|| $1.equals(\"You would not be able to carry all the heavy dirt you dig. You need to drop some things first.\") )) "
+					+ "{ $_ = $proceed($$); } else { $_ = null; }");
 			}
 		}
 	}
@@ -199,7 +200,7 @@ public class DigLikeMiningMod implements WurmMod, Configurable, PreInitable {
 			if (!newDirectory.exists()) {
 				newDirectory.mkdirs();
 			}
-			final FileHandler fh = new FileHandler(String.valueOf(logsPath) + "mods.log", 10240000, 200, true);
+			final FileHandler fh = new FileHandler(String.valueOf(logsPath) + this.getClass().getSimpleName() + ".log", 10240000, 200, true);
 			if (bDebug) {
 				fh.setLevel(Level.INFO);
 			}

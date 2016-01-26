@@ -26,7 +26,9 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 	boolean noMeditateDelay = true;
 	boolean noMeditateDistance = true;
 	boolean unlimitedMeditations = false;
+	boolean useCustomTime = false;
 	float pathLevelDelayMultiplier = 1.0f;
+	int customTime = 300;
 	boolean bDebug = false;
 	private Logger logger = Logger.getLogger(this.getClass().getName());
 
@@ -36,7 +38,9 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 		noMeditateDelay = Boolean.parseBoolean(properties.getProperty("noMeditateDelay", Boolean.toString(noMeditateDelay)));
 		noMeditateDistance = Boolean.parseBoolean(properties.getProperty("noMeditateDistance", Boolean.toString(noMeditateDistance)));
 		unlimitedMeditations = Boolean.parseBoolean(properties.getProperty("unlimitedMeditations", Boolean.toString(unlimitedMeditations)));
+		useCustomTime = Boolean.parseBoolean(properties.getProperty("useCustomTime", Boolean.toString(useCustomTime)));
 		pathLevelDelayMultiplier = Float.parseFloat(properties.getProperty("pathLevelDelayMultiplier", Float.toString(pathLevelDelayMultiplier)));
+		customTime = Integer.parseInt(properties.getProperty("customTime", Integer.toString(customTime)));
 		bDebug = Boolean.parseBoolean(properties.getProperty("debug", Boolean.toString(bDebug)));
 		try {
 			final String logsPath = Paths.get("mods") + "/logs/";
@@ -44,7 +48,7 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 			if (!newDirectory.exists()) {
 				newDirectory.mkdirs();
 			}
-			final FileHandler fh = new FileHandler(String.valueOf(logsPath) + "mods.log", 10240000, 200, true);
+			final FileHandler fh = new FileHandler(String.valueOf(logsPath) + this.getClass().getSimpleName() + ".log", 10240000, 200, true);
 			if (bDebug) {
 				fh.setLevel(Level.INFO);
 			}
@@ -62,6 +66,8 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 		logger.log(Level.INFO, "noMeditateDistance: " + noMeditateDistance);
 		logger.log(Level.INFO, "unlimitedMeditations: " + unlimitedMeditations);
 		logger.log(Level.INFO, "pathLevelDelayMultiplier: " + pathLevelDelayMultiplier);
+		logger.log(Level.INFO, "useCustomTime: " + useCustomTime);
+		logger.log(Level.INFO, "customTime: " + customTime);
 		Debug("Debugging messages are enabled.");
 		
 	}
@@ -77,7 +83,7 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 	@Override
 	public void preInit() {
 		if (autoPassSkillChecks || noMeditateDistance || noMeditateDelay 
-				|| unlimitedMeditations ) {
+				|| unlimitedMeditations || useCustomTime ) {
 			try {
 				CtClass ctCults = HookManager.getInstance().getClassPool().get("com.wurmonline.server.players.Cults");
 				ctCults.getDeclaredMethod("meditate").instrument(new ExprEditor() {
@@ -160,6 +166,29 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 									Debug("Replaced getSkillgainCount");
 									return;
 								}
+							}
+						}
+						if (useCustomTime) {
+							/*
+							 * These two functions are where the action duration, once calculated,
+							 * is communicated/stored.  By replacing the time variable with
+							 * customTime, we'll set it to the duration we want.  The first one is 
+							 * the server-side memory of the action time.  It's the one that determines
+							 * when the action is over/complete, but not what is shown to the user's
+							 * action timer.
+							 */
+							if (m.getClassName().equals("com.wurmonline.server.behaviours.Action")
+									&& m.getMethodName().equals("setTimeLeft")) {
+								m.replace("$_ = $proceed(" + customTime + ");");
+								return;
+							}
+							/*
+							 * This is what is passed to the user's action timer.
+							 */
+							if (m.getClassName().equals("com.wurmonline.server.creatures.Creature")
+									&& m.getMethodName().equals("sendActionControl")) {
+								m.replace("$_ = $proceed($1, $2, " + customTime + ");");
+								return;
 							}
 						}
 					}

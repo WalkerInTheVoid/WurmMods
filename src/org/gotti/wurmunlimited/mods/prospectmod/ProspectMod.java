@@ -1,8 +1,13 @@
 package org.gotti.wurmunlimited.mods.prospectmod;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Properties;
+import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 import org.gotti.wurmunlimited.modloader.classhooks.HookException;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
@@ -66,6 +71,26 @@ public class ProspectMod implements WurmMod, Configurable, PreInitable {
 		canFindOreUnderground = Boolean.valueOf(properties.getProperty("canFindOreUnderground", Boolean.toString(canFindOreUnderground)));
 		logger.log(Level.INFO, "canFindOreUnderground: " + canFindOreUnderground);
 		bDebug = Boolean.parseBoolean(properties.getProperty("debug", Boolean.toString(bDebug)));
+		try {
+			final String logsPath = Paths.get("mods") + "/logs/";
+			final File newDirectory = new File(logsPath);
+			if (!newDirectory.exists()) {
+				newDirectory.mkdirs();
+			}
+			final FileHandler fh = new FileHandler(String.valueOf(logsPath) + this.getClass().getSimpleName() + ".log", 10240000, 200, true);
+			if (bDebug) {
+				fh.setLevel(Level.INFO);
+			}
+			else {
+				fh.setLevel(Level.WARNING);
+			}
+			fh.setFormatter(new SimpleFormatter());
+			logger.addHandler(fh);
+		}
+		catch (IOException ie) {
+			System.err.println(this.getClass().getName() + ": Unable to add file handler to logger");
+			logger.log(Level.WARNING, this.getClass().getName() + ": Unable to add file handler to logger");
+		}
 		Debug("Debugging messages enabled.");
 	}
 	

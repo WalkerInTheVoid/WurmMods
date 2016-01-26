@@ -1,4 +1,4 @@
-package org.gotti.wurmunlimited.mods.bulkmod;
+package org.gotti.wurmunlimited.mods.salvemod;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,48 +16,45 @@ import org.gotti.wurmunlimited.modloader.interfaces.PreInitable;
 import org.gotti.wurmunlimited.modloader.interfaces.WurmMod;
 
 import javassist.CannotCompileException;
-import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.NotFoundException;
 import javassist.expr.ExprEditor;
-import javassist.expr.FieldAccess;
+import javassist.expr.MethodCall;
 
-public class BulkMod implements WurmMod, Configurable, PreInitable {
-
-	private boolean ignoreTemp = true;
+public class SalveMod implements WurmMod, Configurable, PreInitable {
+	
 	private Logger logger = Logger.getLogger(this.getClass().getName());
 	private static boolean bDebug = false;
-	
+	private boolean nameByPower = true;
+
 	@Override
 	public void preInit() {
-		// TODO Auto-generated method stub
-		if(ignoreTemp) {
+		if (nameByPower) {
 			try {
-				CtClass ctItem = HookManager.getInstance().getClassPool()
-						.getCtClass("com.wurmonline.server.items.Item");
-				final CtMethod moveToItem = ctItem.getDeclaredMethod("moveToItem");
-				moveToItem.instrument(new ExprEditor() {
-					public void edit(FieldAccess f)
+				CtMethod createSalve = HookManager.getInstance().getClassPool().getCtClass("com.wurmonline.server.behaviours.MethodsItems").getDeclaredMethod("createSalve");
+				createSalve.instrument(new ExprEditor() {
+					public void edit(MethodCall m)
 							throws CannotCompileException {
-						if(f.getClassName().equals("com.wurmonline.server.items.Item")
-								&& f.getFieldName().equals("temperature")) {
-							Debug("Replacing temperature field access in moveToItem...");
-							f.replace("$_ = 0;");
+						if (m.getClassName().equals("com.wurmonline.server.items.Item")
+								&& m.getMethodName().equals("setDescription")) {
+							/*The objective here is to add a prefix to the 
+							 * description that lists the healing cover's power.
+							 */
+							m.replace("java.lang.String sPower = java.lang.String.valueOf(source.getAlchemyType() * target.getAlchemyType());\r\n" + 
+									"$_ = $proceed(\"00\".substring(sPower.length()) + sPower + \" - \" + $1);");
 						}
 					}
 				});
-			}
-			catch (NotFoundException | CannotCompileException e) {
-				logger.severe("Exception in modifying Item.class: " + e);
+			} catch (NotFoundException | CannotCompileException e) {
+				e.printStackTrace();
 				throw new HookException(e);
 			}
 		}
-
 	}
 
 	@Override
 	public void configure(Properties properties) {
-		ignoreTemp = Boolean.parseBoolean(properties.getProperty("ignoreTemp", Boolean.toString(ignoreTemp)));
+		nameByPower = Boolean.parseBoolean(properties.getProperty("nameByPower", Boolean.toString(nameByPower)));
 		bDebug = Boolean.parseBoolean(properties.getProperty("debug", Boolean.toString(bDebug)));
 		try {
 			final String logsPath = Paths.get("mods") + "/logs/";
@@ -80,7 +77,7 @@ public class BulkMod implements WurmMod, Configurable, PreInitable {
 			logger.log(Level.WARNING, this.getClass().getName() + ": Unable to add file handler to logger");
 		}
 		Debug("Debugging messages are enabled.");
-		logger.log(Level.INFO, "ignoreTemp: " + ignoreTemp);
+		logger.log(Level.INFO, "nameByPower: " + nameByPower);
 	}
 
 	private void Debug(String x) {
