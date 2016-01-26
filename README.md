@@ -26,8 +26,8 @@ Features (note that each bullet point is independently configurable):
  * Bounty can be paid to player's bank account, instead of to inventory as coins
  * Multiplier for all bounties in general, for ease of fine-tuning for your server
  * Multiplier for player-bred creatures is configurable (default is 0.1, or one-tenth)
- * Bounties can be paid out of thin air (thus unlimited bounty payments) or from the kingdom coffers
- * Non-hostile, same-kingdom creatures can be set to pay out no bounty
+ * Bounties can be paid out of thin air (thus unlimited bounty payments) or from the kingdom coffers (thanks Netscreever)
+ * Non-hostile, same-kingdom creatures can be set to pay out no bounty (thanks again Netscreever)
 
 ### BulkMod
  * Enables placing hot items into BSBs and FSBs, no need to wait for them to cool down.
