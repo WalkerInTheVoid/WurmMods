@@ -23,6 +23,7 @@ Features (note that each bullet point is independently configurable):
  * Enable skillgain for fighting/killing player-bred creatures
  * Convert the chance of receiving a coin award from a slim chance of a rare coin to a certainty of a non-rare coin.  Player-bred creatures offer lesser bounties.  (Note that skillgain for player-bred creatures has to be enabled to award bounties for such kills)
  * Bounty for each species of critter can be independently configured
+ * Bounty can be paid to player's bank account, instead of to inventory as coins
  * Multiplier for all bounties in general, for ease of fine-tuning for your server
  * Multiplier for player-bred creatures is configurable (default is 0.1, or one-tenth)
 
