@@ -65,7 +65,7 @@ public class BulkMod implements WurmMod, Configurable, PreInitable {
 			if (!newDirectory.exists()) {
 				newDirectory.mkdirs();
 			}
-			final FileHandler fh = new FileHandler(String.valueOf(logsPath) + "mods.log", 10240000, 200, true);
+			final FileHandler fh = new FileHandler(String.valueOf(logsPath) + this.getClass().getSimpleName() + ".log", 10240000, 200, true);
 			if (bDebug) {
 				fh.setLevel(Level.INFO);
 			}
