@@ -27,8 +27,11 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 	boolean noMeditateDistance = true;
 	boolean unlimitedMeditations = false;
 	boolean useCustomTime = false;
+	private static final long defaultPathChangeDelay = 86400000L;
+	long pathChangeDelay = defaultPathChangeDelay; 
 	float pathLevelDelayMultiplier = 1.0f;
 	int customTime = 300;
+	int maxLevel = 99;
 	boolean bDebug = false;
 	private Logger logger = Logger.getLogger(this.getClass().getName());
 
@@ -41,6 +44,8 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 		useCustomTime = Boolean.parseBoolean(properties.getProperty("useCustomTime", Boolean.toString(useCustomTime)));
 		pathLevelDelayMultiplier = Float.parseFloat(properties.getProperty("pathLevelDelayMultiplier", Float.toString(pathLevelDelayMultiplier)));
 		customTime = Integer.parseInt(properties.getProperty("customTime", Integer.toString(customTime)));
+		pathChangeDelay = Long.parseLong(properties.getProperty("pathChangeDelay", Long.toString(pathChangeDelay)));
+		maxLevel = Integer.parseInt(properties.getProperty("maxLevel", Integer.toString(maxLevel)));
 		bDebug = Boolean.parseBoolean(properties.getProperty("debug", Boolean.toString(bDebug)));
 		try {
 			final String logsPath = Paths.get("mods") + "/logs/";
@@ -68,6 +73,8 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 		logger.log(Level.INFO, "pathLevelDelayMultiplier: " + pathLevelDelayMultiplier);
 		logger.log(Level.INFO, "useCustomTime: " + useCustomTime);
 		logger.log(Level.INFO, "customTime: " + customTime);
+		logger.log(Level.INFO, "pathChangeDelay: " + pathChangeDelay);
+		logger.log(Level.INFO, "maxLevel: " + maxLevel);
 		Debug("Debugging messages are enabled.");
 		
 	}
@@ -83,7 +90,7 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 	@Override
 	public void preInit() {
 		if (autoPassSkillChecks || noMeditateDistance || noMeditateDelay 
-				|| unlimitedMeditations || useCustomTime ) {
+				|| unlimitedMeditations || useCustomTime || (pathLevelDelayMultiplier != 1.0f)) {
 			try {
 				CtClass ctCults = HookManager.getInstance().getClassPool().get("com.wurmonline.server.players.Cults");
 				ctCults.getDeclaredMethod("meditate").instrument(new ExprEditor() {
@@ -197,10 +204,10 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 				throw new HookException(e);
 			}
 		}
-		if (pathLevelDelayMultiplier != 1.0f) {
-			try {
-				CtClass ctCultist = HookManager.getInstance().getClassPool()
-						.get("com.wurmonline.server.players.Cultist");
+		try {
+			CtClass ctCultist = HookManager.getInstance().getClassPool()
+					.get("com.wurmonline.server.players.Cultist");
+			if (pathLevelDelayMultiplier != 1.0f) {
 				String toInsert = "{\r\n";
 				if (bDebug) {
 					toInsert += "	java.util.logging.Logger.getLogger(\"org.gotti.wurmunlimited.mods.meditatemod.MeditateMod\").info(\"Original time left: \" + $_);\r\n";
@@ -220,11 +227,38 @@ public class MeditateMod implements WurmMod, Configurable, PreInitable {
 				}
 				toInsert += "}";
 				ctCultist.getDeclaredMethod("getTimeLeftToIncreasePath").insertAfter(toInsert);
+			}
+			//Max Level imposition
+			String toInsert = "{\r\n";
+			toInsert += "	if(this.level >= " + maxLevel + ") $_ = java.lang.Long.MAX_VALUE;";
+			toInsert += "}";
+			ctCultist.getDeclaredMethod("getTimeLeftToIncreasePath").insertAfter(toInsert);
+			CtClass ctCults = HookManager.getInstance().getClassPool()
+					.get("com.wurmonline.server.players.Cults");
+			ctCults.getDeclaredMethod("getWaitForProgressMessage")
+				.insertBefore("if(timeToNextLevel == java.lang.Long.MAX_VALUE) " 
+						+ "return \"You have reached the pinnacle of understanding in your path " 
+						+ "and cannot advance further.\";");
+		} catch (NotFoundException | CannotCompileException e) {
+			throw new HookException(e);
+		}
+		if (pathChangeDelay != defaultPathChangeDelay) {
+			try {
+				CtClass ctCultQuestion = HookManager.getInstance().getClassPool().get("com.wurmonline.server.questions.CultQuestion");
+				ctCultQuestion.getDeclaredMethod("answer").instrument(new ExprEditor() {
+					public void edit(MethodCall m) throws CannotCompileException {
+						if (m.getClassName().equals("com.wurmonline.server.players.Player")
+								&& m.getMethodName().equals("getLastChangedPath")) {
+							m.replace("$_ = $proceed($$) - " + defaultPathChangeDelay + " + " + pathChangeDelay + ";");
+							Debug("Adjusted getLastChangedPath.");
+							return;
+						}
+					}
+				});
 			} catch (NotFoundException | CannotCompileException e) {
 				throw new HookException(e);
 			}
 		}
-
 	}
 
 }
