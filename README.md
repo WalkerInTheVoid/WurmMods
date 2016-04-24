@@ -3,15 +3,31 @@ Mods for Wurm Unlimited, by WalkerInTheVoid
 
 Hi, these are mods I've made for Wurm Unlimited.  Below are the descriptions, and each bullet point is its own configuration in the .properties file of the mod in question.
 
-You will need [ago's ModLauncher](https://github.com/ago1024/WurmServerModLauncher/releases) to use these mods.
+You will need [ago's Server ModLauncher](https://github.com/ago1024/WurmServerModLauncher/releases) to use these server mods, and [ago's Client ModLauncher](https://github.com/ago1024/WurmClientModLauncher) to use client mods.
 
-Installation:
+Installation (Server):
 
 1. Place the mod's folder and .disabled file in the /mods directory of your wurm server's folder.
 * Rename the .disabled filed to .properties
 * (Re)Start the server.
 
+Installation (Client):
+
+1. Place the mod's folder and .disabled file in the /mods directory of your wurm client's folder (usually WurmLauncher).
+* Rename the .disabled filed to .properties
+* (Re)Start the client.
+
 Features (note that each bullet point is independently configurable): 
+## Client Mods
+
+### SortMod (BETA) (NEW)
+ * Sort Player Inventory On Game Start
+ * Auto Sort Inventory
+ * Sort Container Contents on Window Open
+ * Auto Sort Container Windows
+ * Auto Sort Skills Window
+
+## Server Mods
 
 ### BoatMod
  * Change the wind effect for all boats to be like a rowboat, with a commensurate increase in speed, up to the cap.
@@ -46,7 +62,9 @@ In addition, added dredging to ship, and using dirt/sand piles on the ground you
   * Disable distance requirements for meditation skill gains (No more need to move 11 tiles for skillgain)
   * A configurable multiplier for path question cooldowns.  This can be set to half to cut these delays in half, set to 0 to disable them entirely, the choice is yours.
   * Specify custom action duration for meditation
-  
+  * Enable configuration of the delay before leveling a new path after leaving an old one
+  * Imposes a configurable maximum level in any path a player may reach.
+
 ### PhobiaMod
 Don't like the spider models?  Swap out spiders with other mobs!
   * Replace Huge Spiders with Black Bears
