@@ -8,13 +8,13 @@ You will need [ago's Server ModLauncher](https://github.com/ago1024/WurmServerMo
 Installation (Server):
 
 1. Place the mod's folder and .disabled file in the /mods directory of your wurm server's folder.
-* Rename the .disabled filed to .properties
+* Rename the .disabled file to .properties
 * (Re)Start the server.
 
 Installation (Client):
 
 1. Place the mod's folder and .disabled file in the /mods directory of your wurm client's folder (usually WurmLauncher).
-* Rename the .disabled filed to .properties
+* Rename the .disabled file to .properties
 * (Re)Start the client.
 
 Features (note that each bullet point is independently configurable): 
