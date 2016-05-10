@@ -15,9 +15,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-import com.wurmonline.server.Server;
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.CreatureTemplateIds;
+import com.wurmonline.server.creatures.CreatureTypes;
 import com.wurmonline.server.economy.Economy;
 import com.wurmonline.server.economy.Shop;
 import com.wurmonline.server.items.Item;
@@ -33,14 +33,15 @@ import javassist.bytecode.Descriptor;
 import javassist.expr.ExprEditor;
 import javassist.expr.MethodCall;
 
+import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.classhooks.InvocationHandlerFactory;
 import org.gotti.wurmunlimited.modloader.interfaces.Configurable;
 import org.gotti.wurmunlimited.modloader.interfaces.Initable;
 import org.gotti.wurmunlimited.modloader.interfaces.PreInitable;
-import org.gotti.wurmunlimited.modloader.interfaces.WurmMod;
+import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;
 
-public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
+public class BountyMod implements WurmServerMod, Configurable, PreInitable, Initable {
 	private Logger logger = Logger.getLogger(this.getClass().getName());
 	private boolean skillGainForBred = true;
 	private boolean outOfThinAir = false;
@@ -50,7 +51,9 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 	private float bountyMultiplier = 1.0f;
 	private float bredMultiplier = 0.1f;
 	private static boolean bDebug = false;
+	private long defaultBounty = 100;
 	public static Map<Integer, Long> creatureBounties;
+	public static Map<Byte, Float> typeModifiers;
 
 	@Override
 	public void configure(Properties properties) {
@@ -61,6 +64,7 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 		payBountyToBank = Boolean.parseBoolean(properties.getProperty("payBountyToBank", Boolean.toString(payBountyToBank)));
 		bountyMultiplier = Float.parseFloat(properties.getProperty("bountyMultiplier", Float.toString(bountyMultiplier)));
 		bredMultiplier = Float.parseFloat(properties.getProperty("bredMultiplier", Float.toString(bredMultiplier)));
+		defaultBounty = Long.parseLong(properties.getProperty("defaultBounty", Long.toString(defaultBounty)));
 		bDebug = Boolean.parseBoolean(properties.getProperty("debug", Boolean.toString(bDebug)));
 		try {
 			final String logsPath = Paths.get("mods") + "/logs/";
@@ -93,6 +97,7 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 		//Now for the individual bounties
 		//Bounties are in iron coins.  So 100 = 1 copper, 10000 = 1 silver, etc
 		creatureBounties = new HashMap<Integer, Long>();
+		typeModifiers = new HashMap<Byte, Float>();
 		//Cow, 1 copper
 		loadBounty(properties, "Cow_Brown", CreatureTemplateIds.COW_BROWN_CID, 100);
 		//Black wolf, 3 copper
@@ -217,15 +222,85 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 		loadBounty(properties, "Drake_Red", CreatureTemplateIds.DRAKE_RED_CID, 10000);
 		//Blue Drake, 1 silver (Remember this is per slayer)
 		loadBounty(properties, "Drake_Blue", CreatureTemplateIds.DRAKE_BLUE_CID, 10000);
+		//Fog Spider, 8 copper
+		loadBounty(properties, "Spider_Fog", CreatureTemplateIds.SPIDER_FOG_CID, 800);
+
+		//Don't even know what these are yet so not yet putting them in the config file, but just in case...
+		//Rift Jackal One, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Rift_Jackal_One", CreatureTemplateIds.RIFT_JACKAL_ONE_CID, 10000);
+		//Rift Jackal Two, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Rift_Jackal_Two", CreatureTemplateIds.RIFT_JACKAL_TWO_CID, 10000);
+		//Rift Jackal Three, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Rift_Jackal_Three", CreatureTemplateIds.RIFT_JACKAL_THREE_CID, 10000);
+		//Rift Jackal Four, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Rift_Jackal_Four", CreatureTemplateIds.RIFT_JACKAL_FOUR_CID, 10000);
+		
+		
+		//Valrei Critters, that I thought I wouldn't have to handle.  WRONG!
+		//Sol Demon, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Demon_Sol", CreatureTemplateIds.DEMON_SOL_CID, 10000);
+		//Deathcrawler Minion, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Deathcrawler_Minion", CreatureTemplateIds.DEATHCRAWLER_MINION_CID, 10000);
+		//Spawn of Uttacha, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Spawn_Uttacha", CreatureTemplateIds.SPAWN_UTTACHA_CID, 10000);
+		//Son Of Nogump, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Son_Of_Nogump", CreatureTemplateIds.SON_OF_NOGUMP_CID, 10000);
+		//Drakespirit, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Drakespirit", CreatureTemplateIds.DRAKESPIRIT_CID, 10000);
+		//Eaglespirit, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Eaglespirit", CreatureTemplateIds.EAGLESPIRIT_CID, 10000);
+		//Vynora Avatar, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Avatar_Vynora", CreatureTemplateIds.EPIPHANY_VYNORA_CID, 10000);
+		//Magranon Avatar, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Avatar_Magranon", CreatureTemplateIds.MAGRANON_JUGGERNAUT_CID, 10000);
+		//Fo Avatar, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Avatar_Fo", CreatureTemplateIds.MANIFESTATION_FO_CID, 10000);
+		//Libila Avatar, 1 silver (Remember this is per slayer)
+		loadBounty(properties, "Avatar_Libila", CreatureTemplateIds.INCARNATION_LIBILA_CID, 10000);
+		
+		
+		//Now for creature statuses and their multipliers
+		//
+	    //Fierce, 1.5X
+		loadModifier(properties, "Fierce", CreatureTypes.C_MOD_FIERCE, 1.5f);
+	    //Angry, 1.4X
+		loadModifier(properties, "Angry", CreatureTypes.C_MOD_ANGRY, 1.4f);
+	    //Raging, 1.6X
+		loadModifier(properties, "Raging", CreatureTypes.C_MOD_RAGING, 1.6f);
+	    //Slow, 0.9X
+		loadModifier(properties, "Slow", CreatureTypes.C_MOD_SLOW, 0.95f);
+	    //Alert, 1.2X
+		loadModifier(properties, "Alert", CreatureTypes.C_MOD_ALERT, 1.2f);
+	    //Greenish, 1.7X
+		loadModifier(properties, "Greenish", CreatureTypes.C_MOD_GREENISH, 1.7f);
+	    //Lurking, 1.1X
+		loadModifier(properties, "Lurking", CreatureTypes.C_MOD_LURKING, 1.1f);
+	    //Sly, 0.6X
+		loadModifier(properties, "Sly", CreatureTypes.C_MOD_SLY, 0.8f);
+	    //Hardened, 1.3X
+		loadModifier(properties, "Hardened", CreatureTypes.C_MOD_HARDENED, 1.3f);
+	    //Scared, 0.7X
+		loadModifier(properties, "Scared", CreatureTypes.C_MOD_SCARED, 0.85f);
+	    //Diseased, 0.8X
+		loadModifier(properties, "Diseased", CreatureTypes.C_MOD_DISEASED, 0.9f);
+	    //Champion, 1.7X
+		loadModifier(properties, "Champion", CreatureTypes.C_MOD_CHAMPION, 1.7f);
 
 	}
 	
-	public void loadBounty(Properties properties, String creatureName, int templateID, long defaultBounty) {
+	public void loadBounty(Properties properties, String creatureName, int templateID, long defaultCritterBounty) {
 		String bountyName = creatureName + "_Bounty";
-		long bounty = Long.parseLong(properties.getProperty(bountyName, Long.toString(defaultBounty)));
+		long bounty = Long.parseLong(properties.getProperty(bountyName, Long.toString(defaultCritterBounty)));
 		bounty = (long)(bounty * bountyMultiplier);
 		creatureBounties.put(templateID, bounty);
 		logger.log(Level.INFO, bountyName + ": " + bounty);
+	}
+	
+	public void loadModifier(Properties properties, String modifierName, byte modifierID, float defaultMultiplier) {
+		String statusName = modifierName + "_StatusMultiplier";
+		float multiplier = Float.parseFloat(properties.getProperty(statusName, Float.toString(defaultMultiplier)));
+		typeModifiers.put(modifierID, multiplier);
+		logger.log(Level.INFO, statusName + ": " + multiplier);
 	}
 	
 	@Override
@@ -333,169 +408,68 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
                     return true;
                 } else {
 		            final Shop kingsMoney = Economy.getEconomy().getKingsShop();
-					if (outOfThinAir || kingsMoney.getMoney() > 100000L) {
-						Debug("King Has enough money, checking Template ID...");
-						int templateid = thisCreature.getTemplate().getTemplateId();
-						Debug("Template id is: " + templateid + "\tChecking if creatureBounties has that key...");
-						if (org.gotti.wurmunlimited.mods.bountymod.BountyMod.creatureBounties.containsKey(templateid)) {
-							Debug("creatureBounties does have that id!");
-							long bounty = org.gotti.wurmunlimited.mods.bountymod.BountyMod.creatureBounties.get(templateid);
-							Debug("Bounty is: " + bounty);
-							if(thisCreature.isBred()) {
-								bounty = (long)(bounty * bredMultiplier);
-								Debug("Creature was bred, so bounty is reduced to: " + bounty);
-							}
-							String coinMessage;
-							if (outOfThinAir || kingsMoney.getMoney() > bounty + 100000L) {
-								Debug("King can cover all the bounty.");
-								coinMessage = "You receive a bounty of ";
-							} else {
-								bounty = kingsMoney.getMoney() - 100000L;
-								Debug("King can't cover all the bounty, reduced to: " + bounty);
-								coinMessage = "The kingdom coffers have run low, and so you only receive ";
-							}
-							if(payBountyToBank) {
-								Debug("Bounty goes to player's bank.  Adding to bank...");
-								thisPlayer.addMoney(bounty);
-                                if (!outOfThinAir) {
-                                    kingsMoney.setMoney(kingsMoney.getMoney() - bounty);
-                                }
-							} else {
-								Debug("Bounty goes to player inventory.  Getting coins...");
-								Item[] coins = Economy.getEconomy().getCoinsFor(bounty);
-								Debug("Giving coins to player...");
-								for (Iterator<Item> iterator = Arrays.asList(coins)
-										.iterator(); iterator.hasNext();) {
-									Item coin = iterator.next();
-									thisPlayer.getInventory().insertItem(coin, true);
-                                    if (!outOfThinAir) {
-                                        kingsMoney.setMoney(kingsMoney.getMoney() - 
-                                        		Economy.getValueFor(coin.getTemplateId()));
-                                    }
-								}
-							}
-							Debug("Compiling message...");
-							coinMessage += Economy.getEconomy().getChangeFor(bounty).getChangeString();
-							if (payBountyToBank) {
-								coinMessage += " to your bank account.";
-							} else {
-								coinMessage += ".";
-							}
-							Debug("Sending message...");
-							thisPlayer.getCommunicator().sendSafeServerMessage(coinMessage);
-							Debug("CheckCoinBounty finished.");
-							return true;
-						} else {
-							Debug("creatureBounties doesn't have that id.");
-							Logger.getLogger("org.gotti.wurmunlimited.mods.bountymod.BountyMod")
-								.warning("No bounty found for templateid: " + templateid + ", generating random bounty.");
-							int coinType = 50;
-							String coinMessage = "a copper coin.";
-							final int coinRand = Math.max(Server.rand.nextInt(10),
-									(thisCreature.isDomestic() && !thisCreature.isBred()) ? Server.rand.nextInt(10) : 0);
-							if (thisCreature.isBred()) {
-								// If it's a bred creature, reduced coinage rate.
-								switch (coinRand) {
-								case 0: {
-									// 1 iron coin
-									Debug("Awarding 1 iron");
-									coinType = 51;
-									coinMessage = "an iron coin.";
-									break;
-								}
-								case 1:
-								case 2:
-								case 3:
-								case 4: {
-									// 5 iron coin
-									Debug("Awarding 5 iron");
-									coinMessage = "five irons.";
-									coinType = 55;
-									break;
-								}
-								case 5:
-								case 6:
-								case 7:
-								case 8: {
-									// 20 copper coin
-									Debug("Awarding 20 iron");
-									coinMessage = "twenty irons.";
-									coinType = 59;
-									break;
-								}
-								case 9: {
-									// 1 copper coin
-									Debug("Awarding 1 copper");
-									coinMessage = "a copper coin.";
-									coinType = 50;
-									break;
-								}
-								default: {
-									// 1 copper coin
-									Debug("Awarding 1 iron");
-									coinMessage = "an iron coin.";
-									coinType = 51;
-									break;
-								}
-								}
-							} else {
-								switch (coinRand) {
-								case 0: {
-									// 1 copper coin
-									Debug("Awarding 1 copper");
-									coinMessage = "a copper coin.";
-									coinType = 50;
-									break;
-								}
-								case 1:
-								case 2:
-								case 3:
-								case 4: {
-									// 5 copper coin
-									Debug("Awarding 5 copper");
-									coinMessage = "five coppers.";
-									coinType = 54;
-									break;
-								}
-								case 5:
-								case 6:
-								case 7:
-								case 8: {
-									// 20 copper coin
-									Debug("Awarding 20 copper");
-									coinMessage = "twenty coppers.";
-									coinType = 58;
-									break;
-								}
-								case 9: {
-									// 1 silver coin
-									Debug("Awarding 1 silver");
-									coinMessage = "a silver coin.";
-									coinType = 52;
-									break;
-								}
-								default: {
-									// 1 copper coin
-									Debug("Awarding 1 copper");
-									coinMessage = "a copper coin.";
-									coinType = 50;
-									break;
-								}
-								}
-							}
-							final Item[] coins = Economy.getEconomy().getCoinsFor(Economy.getValueFor(coinType));
-							for (Iterator<Item> iterator = Arrays.asList(coins).iterator(); iterator.hasNext();) {
-								Item coin = iterator.next();
-								thisPlayer.getInventory().insertItem(coin, true);
-								if (!outOfThinAir) {
-									kingsMoney.setMoney(kingsMoney.getMoney() - Economy.getValueFor(coin.getTemplateId()));
-								}
-							}
-							thisPlayer.getCommunicator().sendNormalServerMessage("The king has not decided on an official bounty for such a creature, but as a snap decision you receive a bounty of " + coinMessage);
-							return true;
-	
-						}
-					}
+		            if (outOfThinAir || kingsMoney.getMoney() > 100000L) {
+		            	Debug("King Has enough money, checking Template ID...");
+		            	int templateid = thisCreature.getTemplate().getTemplateId();
+		            	Debug("Template id is: " + templateid + "\tChecking if creatureBounties has that key...");
+		            	long bounty = defaultBounty;
+		            	String coinMessage = "";
+		            	if (org.gotti.wurmunlimited.mods.bountymod.BountyMod.creatureBounties.containsKey(templateid)) {
+		            		Debug("creatureBounties does have that id!");
+		            		bounty = org.gotti.wurmunlimited.mods.bountymod.BountyMod.creatureBounties.get(templateid);
+		            	} else {
+		            		Debug("creatureBounties doesn't have that id.");
+		            		Logger.getLogger("org.gotti.wurmunlimited.mods.bountymod.BountyMod")
+		            		.warning("No bounty found for templateid: " + templateid + ", using Default.");
+		            		coinMessage += "The king has not heard of such a creature, and in surprise only awards a default bounty.  ";
+		            	}
+		            	Debug("Bounty is: " + bounty);
+		            	bounty = adjustBountyForStatus(thisCreature, bounty);
+		            	Debug("Bounty, adjusted for status, is: " + bounty);
+		            	if(thisCreature.isBred()) {
+		            		bounty = (long)(bounty * bredMultiplier);
+		            		Debug("Creature was bred, so bounty is reduced to: " + bounty);
+		            	}
+		            	if (outOfThinAir || kingsMoney.getMoney() > bounty + 100000L) {
+		            		Debug("King can cover all the bounty.");
+		            		coinMessage += "You receive a bounty of ";
+		            	} else {
+		            		bounty = kingsMoney.getMoney() - 100000L;
+		            		Debug("King can't cover all the bounty, reduced to: " + bounty);
+		            		coinMessage += "The kingdom coffers have run low, and so you only receive ";
+		            	}
+		            	if(payBountyToBank) {
+		            		Debug("Bounty goes to player's bank.  Adding to bank...");
+		            		thisPlayer.addMoney(bounty);
+		            		if (!outOfThinAir) {
+		            			kingsMoney.setMoney(kingsMoney.getMoney() - bounty);
+		            		}
+		            	} else {
+		            		Debug("Bounty goes to player inventory.  Getting coins...");
+		            		Item[] coins = Economy.getEconomy().getCoinsFor(bounty);
+		            		Debug("Giving coins to player...");
+		            		for (Iterator<Item> iterator = Arrays.asList(coins)
+		            				.iterator(); iterator.hasNext();) {
+		            			Item coin = iterator.next();
+		            			thisPlayer.getInventory().insertItem(coin, true);
+		            			if (!outOfThinAir) {
+		            				kingsMoney.setMoney(kingsMoney.getMoney() - 
+		            						Economy.getValueFor(coin.getTemplateId()));
+		            			}
+		            		}
+		            	}
+		            	Debug("Compiling message...");
+		            	coinMessage += Economy.getEconomy().getChangeFor(bounty).getChangeString();
+		            	if (payBountyToBank) {
+		            		coinMessage += " to your bank account.";
+		            	} else {
+		            		coinMessage += ".";
+		            	}
+		            	Debug("Sending message...");
+		            	thisPlayer.getCommunicator().sendSafeServerMessage(coinMessage);
+		            	Debug("CheckCoinBounty finished.");
+		            	return true;
+		            }
 		            else {
 		            	thisPlayer.getCommunicator().sendNormalServerMessage("There are apparently no coins in the coffers to pay out a bounty at the moment.");
 		            }
@@ -517,4 +491,20 @@ public class BountyMod implements WurmMod, Configurable, PreInitable, Initable {
 		}
 	}
 
+	public static long adjustBountyForStatus (Creature victim, long bounty) {
+		try {
+			byte modtype = ReflectionUtil.getPrivateField(victim.getStatus(), ReflectionUtil.getField(com.wurmonline.server.creatures.CreatureStatus.class, "modtype"));
+	        if (modtype <= 0) {
+	            return bounty;
+	        }
+			if (typeModifiers.containsKey(modtype)) {
+				bounty = (long)(bounty * typeModifiers.get(modtype));
+			}
+		} catch (IllegalArgumentException | IllegalAccessException | ClassCastException | NoSuchFieldException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return bounty;
+		}
+		return bounty;
+	}
 }
