@@ -225,17 +225,23 @@ public class BountyMod implements WurmServerMod, Configurable, PreInitable, Init
 		//Fog Spider, 8 copper
 		loadBounty(properties, "Spider_Fog", CreatureTemplateIds.SPIDER_FOG_CID, 800);
 
-		//Don't even know what these are yet so not yet putting them in the config file, but just in case...
-		//Rift Jackal One, 1 silver (Remember this is per slayer)
-		loadBounty(properties, "Rift_Jackal_One", CreatureTemplateIds.RIFT_JACKAL_ONE_CID, 10000);
-		//Rift Jackal Two, 1 silver (Remember this is per slayer)
-		loadBounty(properties, "Rift_Jackal_Two", CreatureTemplateIds.RIFT_JACKAL_TWO_CID, 10000);
-		//Rift Jackal Three, 1 silver (Remember this is per slayer)
-		loadBounty(properties, "Rift_Jackal_Three", CreatureTemplateIds.RIFT_JACKAL_THREE_CID, 10000);
-		//Rift Jackal Four, 1 silver (Remember this is per slayer)
-		loadBounty(properties, "Rift_Jackal_Four", CreatureTemplateIds.RIFT_JACKAL_FOUR_CID, 10000);
-		
-		
+		//Rift Monsters
+		//Rift Beast, 8 copper
+		loadBounty(properties, "Rift_Beast", CreatureTemplateIds.RIFT_JACKAL_ONE_CID, 800);
+		//Rift Jackal, 10 copper
+		loadBounty(properties, "Rift_Jackal", CreatureTemplateIds.RIFT_JACKAL_TWO_CID, 1000);
+		//Rift Ogre, 20 copper
+		loadBounty(properties, "Rift_Ogre", CreatureTemplateIds.RIFT_JACKAL_THREE_CID, 2000);
+		//Rift Warmaster, 1 silver
+		loadBounty(properties, "Rift_Warmaster", CreatureTemplateIds.RIFT_JACKAL_FOUR_CID, 10000);
+		//Rift Caster, 20 copper
+		loadBounty(properties, "Rift_Caster", CreatureTemplateIds.RIFT_JACKAL_CASTER_CID, 2000);
+		//Rift Ogre Mage, 20 copper
+		loadBounty(properties, "Rift_Ogre_Mage", CreatureTemplateIds.RIFT_OGRE_MAGE_CID, 2000);
+		//Rift Summoner, 20 copper
+		loadBounty(properties, "Rift_Summoner", CreatureTemplateIds.RIFT_JACKAL_SUMMONER_CID, 2000);
+
+
 		//Valrei Critters, that I thought I wouldn't have to handle.  WRONG!
 		//Sol Demon, 1 silver (Remember this is per slayer)
 		loadBounty(properties, "Demon_Sol", CreatureTemplateIds.DEMON_SOL_CID, 10000);
