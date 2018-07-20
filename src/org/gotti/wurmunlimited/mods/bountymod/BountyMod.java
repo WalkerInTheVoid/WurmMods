@@ -36,12 +36,11 @@ import javassist.expr.MethodCall;
 import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.classhooks.InvocationHandlerFactory;
-import org.gotti.wurmunlimited.modloader.interfaces.Configurable;
-import org.gotti.wurmunlimited.modloader.interfaces.Initable;
-import org.gotti.wurmunlimited.modloader.interfaces.PreInitable;
-import org.gotti.wurmunlimited.modloader.interfaces.WurmServerMod;
+import org.gotti.wurmunlimited.modloader.interfaces.*;
+import org.gotti.wurmunlimited.modsupport.IdFactory;
+import org.gotti.wurmunlimited.modsupport.IdType;
 
-public class BountyMod implements WurmServerMod, Configurable, PreInitable, Initable {
+public class BountyMod implements WurmServerMod, Configurable, PreInitable, Initable, ServerStartedListener {
 	private Logger logger = Logger.getLogger(this.getClass().getName());
 	private boolean skillGainForBred = true;
 	private boolean outOfThinAir = false;
@@ -54,6 +53,8 @@ public class BountyMod implements WurmServerMod, Configurable, PreInitable, Init
 	private long defaultBounty = 100;
 	public static Map<Integer, Long> creatureBounties;
 	public static Map<Byte, Float> typeModifiers;
+
+	private Map<String, Long> customBounties = new HashMap<>();
 
 	@Override
 	public void configure(Properties properties) {
@@ -263,7 +264,12 @@ public class BountyMod implements WurmServerMod, Configurable, PreInitable, Init
 		loadBounty(properties, "Avatar_Fo", CreatureTemplateIds.MANIFESTATION_FO_CID, 10000);
 		//Libila Avatar, 1 silver (Remember this is per slayer)
 		loadBounty(properties, "Avatar_Libila", CreatureTemplateIds.INCARNATION_LIBILA_CID, 10000);
-		
+
+		for (String key : properties.stringPropertyNames()) {
+			if (key.startsWith("Custom_") && key.endsWith("_Bounty"))
+				customBounties.put(key, Long.parseLong(properties.getProperty(key), 10));
+		}
+
 		
 		//Now for creature statuses and their multipliers
 		//
@@ -512,5 +518,15 @@ public class BountyMod implements WurmServerMod, Configurable, PreInitable, Init
 			return bounty;
 		}
 		return bounty;
+	}
+
+	@Override
+	public void onServerStarted() {
+		for (Map.Entry<String, Long> e : customBounties.entrySet()) {
+			long bounty = (long) (e.getValue() * bountyMultiplier);
+			int tpl = IdFactory.getIdFor(e.getKey().substring(7, e.getKey().length() - 7), IdType.CREATURETEMPLATE);
+			creatureBounties.put(tpl, bounty);
+			logger.log(Level.INFO, String.format("Added custom bounty: %s (%d) -> %d", e.getKey(), tpl, bounty));
+		}
 	}
 }
