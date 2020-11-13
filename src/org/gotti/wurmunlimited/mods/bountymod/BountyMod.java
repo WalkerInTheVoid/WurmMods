@@ -17,7 +17,7 @@ import java.util.logging.SimpleFormatter;
 
 import com.wurmonline.server.creatures.Creature;
 import com.wurmonline.server.creatures.CreatureTemplateIds;
-import com.wurmonline.server.creatures.CreatureTypes;
+import com.wurmonline.server.creatures.CreatureStatus;
 import com.wurmonline.server.economy.Economy;
 import com.wurmonline.server.economy.Shop;
 import com.wurmonline.server.items.Item;
@@ -264,7 +264,17 @@ public class BountyMod implements WurmServerMod, Configurable, PreInitable, Init
 		loadBounty(properties, "Avatar_Fo", CreatureTemplateIds.MANIFESTATION_FO_CID, 10000);
 		//Libila Avatar, 1 silver (Remember this is per slayer)
 		loadBounty(properties, "Avatar_Libila", CreatureTemplateIds.INCARNATION_LIBILA_CID, 10000);
-
+		
+		//One more round of additions:
+		//Worg, 10 copper
+		loadBounty(properties, "Worg", CreatureTemplateIds.WORG_CID, 1000);
+		//Avenger_of_Light, 10 copper
+		loadBounty(properties, "Avenger_of_Light", CreatureTemplateIds.AVENGER_OF_LIGHT_CID, 1000);
+		//Unicorn Foal, 1 iron
+		loadBounty(properties, "Unicorn_Foal", CreatureTemplateIds.UNICORN_FOAL_CID, 1);
+		//Hell Foal, also 1 iron...
+		loadBounty(properties, "Hell_Foal", CreatureTemplateIds.HELL_FOAL_CID, 1);
+		
 		for (String key : properties.stringPropertyNames()) {
 			if (key.startsWith("Custom_") && key.endsWith("_Bounty"))
 				customBounties.put(key, Long.parseLong(properties.getProperty(key), 10));
@@ -274,29 +284,29 @@ public class BountyMod implements WurmServerMod, Configurable, PreInitable, Init
 		//Now for creature statuses and their multipliers
 		//
 	    //Fierce, 1.5X
-		loadModifier(properties, "Fierce", CreatureTypes.C_MOD_FIERCE, 1.5f);
+		loadModifier(properties, "Fierce", CreatureStatus.C_MOD_FIERCE, 1.5f);
 	    //Angry, 1.4X
-		loadModifier(properties, "Angry", CreatureTypes.C_MOD_ANGRY, 1.4f);
+		loadModifier(properties, "Angry", CreatureStatus.C_MOD_ANGRY, 1.4f);
 	    //Raging, 1.6X
-		loadModifier(properties, "Raging", CreatureTypes.C_MOD_RAGING, 1.6f);
+		loadModifier(properties, "Raging", CreatureStatus.C_MOD_RAGING, 1.6f);
 	    //Slow, 0.9X
-		loadModifier(properties, "Slow", CreatureTypes.C_MOD_SLOW, 0.95f);
+		loadModifier(properties, "Slow", CreatureStatus.C_MOD_SLOW, 0.95f);
 	    //Alert, 1.2X
-		loadModifier(properties, "Alert", CreatureTypes.C_MOD_ALERT, 1.2f);
+		loadModifier(properties, "Alert", CreatureStatus.C_MOD_ALERT, 1.2f);
 	    //Greenish, 1.7X
-		loadModifier(properties, "Greenish", CreatureTypes.C_MOD_GREENISH, 1.7f);
+		loadModifier(properties, "Greenish", CreatureStatus.C_MOD_GREENISH, 1.7f);
 	    //Lurking, 1.1X
-		loadModifier(properties, "Lurking", CreatureTypes.C_MOD_LURKING, 1.1f);
+		loadModifier(properties, "Lurking", CreatureStatus.C_MOD_LURKING, 1.1f);
 	    //Sly, 0.6X
-		loadModifier(properties, "Sly", CreatureTypes.C_MOD_SLY, 0.8f);
+		loadModifier(properties, "Sly", CreatureStatus.C_MOD_SLY, 0.8f);
 	    //Hardened, 1.3X
-		loadModifier(properties, "Hardened", CreatureTypes.C_MOD_HARDENED, 1.3f);
+		loadModifier(properties, "Hardened", CreatureStatus.C_MOD_HARDENED, 1.3f);
 	    //Scared, 0.7X
-		loadModifier(properties, "Scared", CreatureTypes.C_MOD_SCARED, 0.85f);
+		loadModifier(properties, "Scared", CreatureStatus.C_MOD_SCARED, 0.85f);
 	    //Diseased, 0.8X
-		loadModifier(properties, "Diseased", CreatureTypes.C_MOD_DISEASED, 0.9f);
+		loadModifier(properties, "Diseased", CreatureStatus.C_MOD_DISEASED, 0.9f);
 	    //Champion, 1.7X
-		loadModifier(properties, "Champion", CreatureTypes.C_MOD_CHAMPION, 1.7f);
+		loadModifier(properties, "Champion", CreatureStatus.C_MOD_CHAMPION, 1.7f);
 
 	}
 	
